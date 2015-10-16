@@ -40,17 +40,23 @@ class bThread(threading.Thread):
                 # 此时已建立telnet连接，但没有接收到“username:”，直接记录开放telnet的主机，关闭线程
                 if un.find("username:") < 0:
                     if fk_un.acquire():
-                        tn_open_only_writer.writerow((time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
-                                                      self.ip, " ".join(un.split())))
-                        fk_un.release()
+                        try:  # 假如un为None，join()会抛出异常，导致文件锁不能释放
+                            tn_open_only_writer.writerow((time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
+                                                          self.ip, " ".join(un.split())))
+                            fk_un.release()
+                        except:
+                            fk_un.release()
                     tn.close()
                     exit(1)
 
             except Exception, e:
                 if fk_un.acquire():
-                    tn_open_only_writer.writerow((time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
-                                                  self.ip, "Error occured: " + str(e)))
-                    fk_un.release()
+                    try:
+                        tn_open_only_writer.writerow((time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
+                                                      self.ip, "Error occured: " + str(e)))
+                        fk_un.release()
+                    except:
+                        fk_un.release()
                 tn.close()
                 exit(1)
 
@@ -64,17 +70,23 @@ class bThread(threading.Thread):
                 # 说明默认用户名和密码已更改，或者不支持wlctl命令，记录留待备查
                 if wlctl.find("cmd:SUCC") < 0:
                     if fk_nd.acquire():
-                        not_default_login_writer.writerow((time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
-                                                           self.ip, " || ".join(wlctl.split())))
-                        fk_nd.release()
+                        try:  # 假如wlctl为None，join()会抛出异常，导致文件锁不能释放
+                            not_default_login_writer.writerow((time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
+                                                               self.ip, " || ".join(wlctl.split())))
+                            fk_nd.release()
+                        except:
+                            fk_nd.release()
                     tn.close()
                     exit(1)
 
             except Exception, e:
                 if fk_nd.acquire():
-                    not_default_login_writer.writerow((time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
+                    try:
+                        not_default_login_writer.writerow((time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
                                                        self.ip, "%s || error: %s" % (" ".join(wlctl.split()), str(e))))
-                    fk_nd.release()
+                        fk_nd.release()
+                    except:
+                        fk_nd.release()
                 tn.close()
                 exit(1)
 
@@ -106,17 +118,21 @@ class bThread(threading.Thread):
                 IPInterfaceIPAddress = 'Error!!!IPInterfaceIPAddress'
 
             if fk.acquire():
-                writer.writerow((time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
-                                 self.ip,
-                                 SSID,
-                                 Key,
-                                 X_TPLINK_MACAddress,
-                                 IPRouters,
-                                 IPInterfaceIPAddress))
-                fk.release()
+                try:
+                    writer.writerow((time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
+                                     self.ip,
+                                     SSID,
+                                     Key,
+                                     X_TPLINK_MACAddress,
+                                     IPRouters,
+                                     IPInterfaceIPAddress))
+                    fk.release()
+                except:
+                    fk.release()
                 exit(0)
         except:
-            pass
+            if 'tn' in dir():
+                tn.close()
 
 if __name__ == "__main__":
     reload(sys)
