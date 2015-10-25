@@ -164,15 +164,15 @@ if __name__ == "__main__":
     '''
     logfile = file("./output/log.txt", 'ab')
 
-    with open('ip.csv', 'rb') as f:  # ip.csv包含了中国以及周边国家的ip地址，来源于纯真ip数据库
+    with open('ip_data/ip.csv', 'rb') as f:  # ip.csv包含了中国以及周边国家的ip地址，来源于纯真ip数据库
         reader = csv.reader(f, delimiter=',', quotechar='"')
         for row in reader:  # 第一循环：取ip.csv中的每一行
             line1 = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + \
-                    " || " + ": ".join(row[1:4]).decode("gbk")
+                    " || " + ": ".join(row)
             logfile.write(line1 + "\n")  # 记录起始时间、起始ip、终止ip、落地信息
             print line1
 
-            for num in range(ip2num(row[1]), ip2num(row[2]) + 1):  # 第二循环：创建ip.csv中每一行的ip范围
+            for num in range(ip2num(row[0]), ip2num(row[1]) + 1):  # 第二循环：创建ip.csv中每一行的ip范围
                 qu[count] = num2ip(num)  # 加入到ip列表
                 count += 1 # 导入ip的下标动态增长
                 if count == tn:  # 防止导入过多ip消耗内存，当count == tn时开始循环建立线程
@@ -186,7 +186,7 @@ if __name__ == "__main__":
                                 break
                     count = 0  # 将qu列表中的ip下标重新置0
 
-            suma += (ip2num(row[2]) - ip2num(row[1]) + 1)  # 迭加总共处理的ip数量
+            suma += (ip2num(row[1]) - ip2num(row[0]) + 1)  # 迭加总共处理的ip数量
             line2 = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + \
                     " || " + "已处理 %d" % suma + " 个ip；每分钟处理 %.2f" % (suma / (time.time() - t1) * 60) + " 个ip"
             logfile.write(line2 + "\n\n")  # 记录时间、处理的ip总数、每分钟处理的ip数量
@@ -208,7 +208,7 @@ if __name__ == "__main__":
     t2 = time.time()
     print "SUCCESS!!!" + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(t2))
 
-    with open('timelog.txt', 'wb') as f:
+    with open('output/timelog.txt', 'wb') as f:
         f.write(["Start: ", str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(t1))),
                  "\nEnd: ", str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(t2))),
                  "\n", str(suma+count), " ip passed!"])
